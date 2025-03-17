@@ -63,7 +63,7 @@ export function ChessPiece({
   position, 
   isSelected = false,
   onSelect,
-  onMove 
+  // onMove 
 }: ChessPieceProps) {
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
