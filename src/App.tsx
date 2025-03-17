@@ -8,7 +8,7 @@ function App() {
         shadows
         camera={{
           position: [0, 100, 0], // Position camera exactly at top of origin
-          fov: 45,
+          fov: 60,
           near: 0.1,
           far: 1000
         }}
