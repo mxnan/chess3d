@@ -1,9 +1,10 @@
+// src/components/game/Board.tsx
 import { Text } from "@react-three/drei";
 import { RigidBody } from "@react-three/rapier";
 import { useMemo } from "react";
 import * as THREE from "three";
 
-function ChessBoard() {
+function Board() {
   // Create chessboard material with 8x8 squares
   const chessboardMaterial = useMemo(() => {
     const size = 8;
@@ -95,4 +96,4 @@ function ChessBoard() {
   );
 }
 
-export default ChessBoard;
+export default Board;
