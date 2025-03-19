@@ -1,15 +1,14 @@
-// src/scenes/GameScene.tsx
+// src/scenes/game-scene.tsx
+import { Suspense, useEffect } from "react";
 import { Physics } from "@react-three/rapier";
-import { Suspense, useState, useCallback } from "react";
 import { OrbitControls } from "@react-three/drei";
+import { useGameStore } from "../store/gamestore";
 import SpaceBackground from "./common/space-bg";
-import ChessGame from "./scene-1/chessgame";
-import Board from "./scene-1/board";
+import Board from "../components/chess/board";
 import ChessClock from "../components/ui/chess-clock";
 import EmojiPanel from "../components/ui/emoji-panel";
+import TurnIndicator from "../components/ui/turn-indicator";
 import { motion } from "framer-motion-3d";
-
-import { useChessGame } from "../hooks/use-chessgame";
 import { Text } from "@react-three/drei";
 
 interface GameSceneProps {
@@ -20,33 +19,36 @@ interface GameSceneProps {
   };
 }
 
-function GameScene({ gameState }: GameSceneProps) {
-  const { currentTurn, isGameOver, winner, handleMove } = useChessGame();
-  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-
-  // Handle square selection
-  const handleSquareSelect = useCallback(
-    (square: string) => {
-      if (selectedSquare === square) {
-        setSelectedSquare(null);
-      } else if (selectedSquare) {
-        // Attempt to make a move
-        if (handleMove(selectedSquare, square)) {
-          setSelectedSquare(null);
-        } else {
-          // If move failed, select the new square instead
-          setSelectedSquare(square);
-        }
-      } else {
-        setSelectedSquare(square);
-      }
-    },
-    [selectedSquare, handleMove]
-  );
+export default function GameScene({ gameState }: GameSceneProps) {
+  const { 
+    createGame, 
+    currentTurn, 
+    isGameOver,
+    winner,
+    updateGameTime
+  } = useGameStore();
+  
+  // Initialize the game when started
+  useEffect(() => {
+    if (gameState.isStarted && gameState.playerName) {
+      createGame(gameState.playerName, gameState.roomCode);
+    }
+  }, [gameState.isStarted, gameState.playerName, gameState.roomCode, createGame]);
+  
+  // Update game time every second
+  useEffect(() => {
+    if (gameState.isStarted && !isGameOver) {
+      const interval = setInterval(() => {
+        updateGameTime();
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [gameState.isStarted, isGameOver, updateGameTime]);
 
   return (
     <>
-      {/* Space background with player blobs */}
+      {/* Ambient lighting */}
       <ambientLight intensity={0.3} />
       <directionalLight position={[15, 20, 15]} intensity={1.5} castShadow />
       <pointLight position={[-10, 15, -10]} intensity={0.5} color="#6e90f5" />
@@ -68,13 +70,12 @@ function GameScene({ gameState }: GameSceneProps) {
               ease: [0.4, 0, 0.2, 1],
             }}
           >
-            <Board />
+            {/* Only show board and pieces when game is started */}
             {gameState.isStarted && (
-              <ChessGame
-                onSquareSelect={handleSquareSelect}
-                selectedSquare={selectedSquare}
-                currentTurn={currentTurn}
-              />
+              <>
+                <Board />
+                <TurnIndicator currentTurn={currentTurn} />
+              </>
             )}
           </motion.group>
 
@@ -99,13 +100,13 @@ function GameScene({ gameState }: GameSceneProps) {
             </>
           )}
 
+          {/* Game over message */}
           {isGameOver && (
             <motion.group
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring" }}
             >
-              {/* Game over overlay */}
               <Text
                 position={[0, 2, 0]}
                 fontSize={1}
@@ -128,5 +129,3 @@ function GameScene({ gameState }: GameSceneProps) {
     </>
   );
 }
-
-export default GameScene;
