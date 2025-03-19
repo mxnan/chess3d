@@ -1,7 +1,6 @@
 // src/components/chess/board.tsx
 import { useRef } from "react";
 import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
 import { useChessGame } from "../../hooks/use-chessgame";
 import Square from "./square";
 import Piece from "./piece";
@@ -17,21 +16,6 @@ export default function Board({ visible = true }: BoardProps) {
 
   const isStarted = useGameStore((state) => state.isStarted);
   const boardRef = useRef<THREE.Group>(null);
-
-  // Board animation
-  useFrame(() => {
-    if (boardRef.current) {
-      // Adjust visibility based on game state but don't unmount
-      boardRef.current.visible = visible;
-
-      // Subtle rotation to give life to the board
-      boardRef.current.rotation.y = THREE.MathUtils.lerp(
-        boardRef.current.rotation.y,
-        0,
-        0.05
-      );
-    }
-  });
 
   // Create the chess board (8x8)
   const renderSquares = () => {
@@ -68,7 +52,7 @@ export default function Board({ visible = true }: BoardProps) {
     return pieces.map((piece) => {
       const file = piece.square.charCodeAt(0) - 97; // 'a' -> 0, 'b' -> 1, etc.
       const rank = 8 - parseInt(piece.square[1]);
-      const position: [number, number, number] = [file - 3.5, 0, rank - 3.5];
+      const position: [number, number, number] = [file - 3.5, 0.05, rank - 3.5]; // Slight y offset to prevent z-fighting
 
       return (
         <Piece
@@ -85,9 +69,7 @@ export default function Board({ visible = true }: BoardProps) {
   };
 
   return (
-    <group ref={boardRef} visible={true}>
-      {" "}
-      {/* Always keep visible */}
+    <group ref={boardRef} visible={visible}>
       {/* Board frame */}
       <mesh position={[0, -0.1, 0]} receiveShadow>
         <boxGeometry args={[9, 0.2, 9]} />

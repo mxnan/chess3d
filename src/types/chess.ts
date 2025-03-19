@@ -1,3 +1,5 @@
+import { Move } from "chess.js";
+
 // src/types/chess.ts
 export type PieceType = 'pawn' | 'rook' | 'knight' | 'bishop' | 'queen' | 'king';
 export type PieceColor = 'white' | 'black';

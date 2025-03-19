@@ -1,7 +1,6 @@
 // src/components/chess/square.tsx
 import { useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber';
 
 interface SquareProps {
   position: [number, number, number];
@@ -20,18 +19,12 @@ export default function Square({
 }: SquareProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   
-  useFrame(() => {
-    if (meshRef.current && (isSelected || isLegalMove)) {
-      const time = Date.now() * 0.001;
-      meshRef.current.position.y = position[1] + Math.sin(time * 3) * 0.05;
-    }
-  });
-  
+  // Determine the square color based on state
   let squareColor;
   if (isSelected) {
-    squareColor = '#00ff00';
+    squareColor = '#5a9e5a'; // Darker green for selected square
   } else if (isLegalMove) {
-    squareColor = '#ffff00';
+    squareColor = '#5a5abe'; // Blue for legal moves
   } else {
     squareColor = color === 'light' ? '#E6D0AB' : '#A97A65';
   }
@@ -50,6 +43,14 @@ export default function Square({
         metalness={0.1} 
         roughness={0.8}
       />
+      
+      {/* Add a subtle indicator for legal moves */}
+      {isLegalMove && (
+        <mesh position={[0, 0, 0.06]}>
+          <circleGeometry args={[0.2, 32]} />
+          <meshStandardMaterial color="#dddddd" transparent opacity={0.6} />
+        </mesh>
+      )}
     </mesh>
   );
 }
