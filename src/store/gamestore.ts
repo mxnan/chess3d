@@ -21,6 +21,7 @@ interface GameState {
   isGameOver: boolean;
   winner: string | null;
   gameTime: number;
+  // We'll remove isEntering because we'll handle transitions differently
 }
 
 interface GameStore extends GameState {
@@ -59,20 +60,22 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     // Game setup actions
     createGame: (playerName: string, roomCode: string) => {
+      // Reset the chess instance
       const chess = get().chess;
       chess.reset();
       
+      // Batch all state updates together to minimize re-renders
       set({
         isStarted: true,
         roomCode,
         players: [
           {
-            id: 'player1', // Will be replaced with real ID in multiplayer
+            id: 'player1',
             name: playerName,
             color: 'white'
           },
           {
-            id: 'player2', // For demo purposes
+            id: 'player2',
             name: 'Player 2',
             color: 'black'
           }
@@ -86,13 +89,12 @@ export const useGameStore = create<GameStore>((set, get) => {
         gameTime: 0
       });
     },
-
     joinGame: (playerName: string, roomCode: string) => {
       set(state => ({
         players: [
           ...state.players,
           {
-            id: 'player2', // Will be replaced with real ID in multiplayer
+            id: 'player2',
             name: playerName,
             color: 'black'
           }
@@ -118,7 +120,10 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     // Game board actions
     selectSquare: (square) => {
-      const { chess, currentTurn } = get();
+      const { chess, currentTurn, isGameOver } = get();
+      
+      // Don't allow selection if game is over
+      if (isGameOver) return;
       
       if (!square) {
         set({ selectedSquare: null, legalMoves: [] });

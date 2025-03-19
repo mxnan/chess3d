@@ -1,131 +1,143 @@
-// src/scenes/game-scene.tsx
-import { Suspense, useEffect } from "react";
+// Inside game-scene.tsx
+import { useEffect, useRef } from "react";
 import { Physics } from "@react-three/rapier";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, Stars, Environment } from "@react-three/drei";
 import { useGameStore } from "../store/gamestore";
 import SpaceBackground from "./common/space-bg";
 import Board from "../components/chess/board";
 import ChessClock from "../components/ui/chess-clock";
 import EmojiPanel from "../components/ui/emoji-panel";
-import TurnIndicator from "../components/ui/turn-indicator";
 import { motion } from "framer-motion-3d";
 import { Text } from "@react-three/drei";
+import { useFrame, useThree } from "@react-three/fiber";
+import * as THREE from 'three'; // Add this import for THREE
 
-interface GameSceneProps {
-  gameState: {
-    isStarted: boolean;
-    playerName: string;
-    roomCode: string;
-  };
-}
-
-export default function GameScene({ gameState }: GameSceneProps) {
+export default function GameScene() {
   const { 
-    createGame, 
-    currentTurn, 
+    isStarted,
     isGameOver,
     winner,
     updateGameTime
   } = useGameStore();
   
-  // Initialize the game when started
+  const sceneRef = useRef<THREE.Group>(null);
+  const { scene } = useThree();
+  
+  // Preserve scene across transitions
   useEffect(() => {
-    if (gameState.isStarted && gameState.playerName) {
-      createGame(gameState.playerName, gameState.roomCode);
+    // Make sure the scene is properly initialized
+    if (scene) {
+      scene.background = new THREE.Color("#000000");
     }
-  }, [gameState.isStarted, gameState.playerName, gameState.roomCode, createGame]);
+  }, [scene]);
+  
+  // Smooth animation of board position based on game state
+  useFrame(() => {
+    if (sceneRef.current) {
+      // Keep scene visible at all times
+      sceneRef.current.visible = true;
+    }
+  });
   
   // Update game time every second
   useEffect(() => {
-    if (gameState.isStarted && !isGameOver) {
+    if (isStarted && !isGameOver) {
       const interval = setInterval(() => {
         updateGameTime();
       }, 1000);
       
       return () => clearInterval(interval);
     }
-  }, [gameState.isStarted, isGameOver, updateGameTime]);
+  }, [isStarted, isGameOver, updateGameTime]);
 
   return (
-    <>
-      {/* Ambient lighting */}
+    <group ref={sceneRef}>
+      {/* Environment and Lighting */}
+      <color attach="background" args={['#000000']} />
       <ambientLight intensity={0.3} />
       <directionalLight position={[15, 20, 15]} intensity={1.5} castShadow />
       <pointLight position={[-10, 15, -10]} intensity={0.5} color="#6e90f5" />
+      <Environment preset="night" />
 
-      <Suspense fallback={null}>
-        <Physics debug={false}>
-          {/* Always show the space background */}
-          <SpaceBackground />
+      <Physics debug={false}>
+        {/* Space background with stars - always visible */}
+        <SpaceBackground />
+        <Stars 
+          radius={100} 
+          depth={50} 
+          count={1000} 
+          factor={4} 
+          saturation={0} 
+          speed={1.5}
+          fade
+        />
 
-          {/* Chess board and pieces with animation */}
-          <motion.group
-            initial={{ y: -50, scale: 0.5 }}
-            animate={{
-              y: gameState.isStarted ? 0 : -50,
-              scale: gameState.isStarted ? 1 : 0.5,
-            }}
-            transition={{
-              duration: 1.5,
-              ease: [0.4, 0, 0.2, 1],
-            }}
-          >
-            {/* Only show board and pieces when game is started */}
-            {gameState.isStarted && (
-              <>
-                <Board />
-                <TurnIndicator currentTurn={currentTurn} />
-              </>
-            )}
-          </motion.group>
+        {/* Chess board - always present but animated based on game state */}
+        <motion.group
+          initial={{ scale: 0.8, y: -10 }}
+          animate={{ 
+            scale: isStarted ? 1 : 0.8, 
+            y: isStarted ? 0 : -10,
+          }}
+          transition={{
+            type: "spring",
+            stiffness: 260,
+            damping: 20
+          }}
+        >
+          <Board visible={isStarted} />
+        </motion.group>
 
-          {/* UI Elements with animation */}
-          {gameState.isStarted && (
+        {/* UI Elements - only show when game is started */}
+        <motion.group
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isStarted ? 1 : 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {isStarted && (
             <>
-              <motion.group
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1.2, duration: 0.5 }}
-              >
-                <ChessClock position={[-10, 0, 0]} />
-              </motion.group>
-
-              <motion.group
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1.2, duration: 0.5 }}
-              >
-                <EmojiPanel position={[10, 0, 0]} />
-              </motion.group>
+              <ChessClock position={[-8, 3, 0]} />
+              <EmojiPanel position={[8, 3, 0]} />
             </>
           )}
+        </motion.group>
 
-          {/* Game over message */}
-          {isGameOver && (
-            <motion.group
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring" }}
+        {/* Game over message */}
+        {isGameOver && (
+          <motion.group
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 100 }}
+            position={[0, 5, 0]}
+          >
+            <mesh>
+              <planeGeometry args={[10, 3]} />
+              <meshStandardMaterial 
+                color="#1c2e4a" 
+                transparent
+                opacity={0.8}
+                metalness={0.7}
+                roughness={0.2}
+              />
+            </mesh>
+            <Text
+              position={[0, 0, 0.1]}
+              fontSize={1}
+              color="white"
+              anchorX="center"
+              anchorY="middle"
             >
-              <Text
-                position={[0, 2, 0]}
-                fontSize={1}
-                color="white"
-                anchorX="center"
-                anchorY="middle"
-              >
-                {winner === "draw" ? "Draw!" : `${winner} wins!`}
-              </Text>
-            </motion.group>
-          )}
-        </Physics>
+              {winner === "draw" ? "Draw!" : `${winner} wins!`}
+            </Text>
+          </motion.group>
+        )}
+      </Physics>
 
-        <OrbitControls
-          maxPolarAngle={Math.PI / 2.1}
-          minDistance={5}
-          maxDistance={25}
-        />
-      </Suspense>
-    </>
+      <OrbitControls
+        maxPolarAngle={Math.PI / 2.1}
+        minDistance={5}
+        maxDistance={25}
+      />
+    </group>
   );
 }
